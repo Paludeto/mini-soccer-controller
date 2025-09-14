@@ -1,12 +1,12 @@
 # ⚽ Soccer Controller
 
-Cliente em C++ para controlar robôs no **[TraveSim](https://github.com/ThundeRatz/travesim)**, utilizando **Qt6**, **SDL2** e **protobuf**.
+Cliente em C++ para controlar robôs no **[TraveSim](https://github.com/futebol-mini/travesim)**, utilizando **Qt6**, **SDL2** e **protobuf**.
 
 ---
 
 ## 🚀 Pré-requisitos
 
-Este projeto depende do [TraveSim](https://github.com/ThundeRatz/travesim).
+Este projeto depende do [TraveSim](https://github.com/futebol-mini/travesim).
 Certifique-se de que o TraveSim esteja instalado e funcionando antes de usar o controller.
 
 ### Dependências principais
