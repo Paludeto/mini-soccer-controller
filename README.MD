@@ -118,9 +118,8 @@ target_link_libraries(soccer-controller
 ## ▶️ Execução
 
 Após compilar, rode o controller enquanto o **TraveSim** estiver em execução.
-Certifique-se de que o TraveSim está rodando e escutando pacotes UDP.
-Azul -> 127.0.0.1:20013
-Amarelo -> 127.0.0.1:20012
+Certifique-se de que o TraveSim está rodando e escutando pacotes UDP (azul -> 127.0.0.1:20013, amarelo -> 127.0.0.1:20012).
+
 
 Exemplo:
 
