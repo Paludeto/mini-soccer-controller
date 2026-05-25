@@ -9,14 +9,6 @@
 using namespace std;
 
 typedef enum {
-    RELEASED,
-    FWD,
-    BCKWD,
-    LEFT,
-    RIGHT
-} Instructions;
-
-typedef enum {
     BLUE,
     YELLOW
 } Color;
@@ -42,44 +34,32 @@ public:
         _color = newColor;
     }
 
-    void setRobotId(quint8 newId) { 
-        _robotId = newId; 
+    void setRobotId(quint8 newId) {
+        _robotId = newId;
     }
 
-    void sendCommand(Instructions instruction) {
-        
-        // Cria o packet
+    void sendWheelCommand(float leftSpeed, float rightSpeed) {
         fira_message::sim_to_ref::Packet packet;
         fira_message::sim_to_ref::Command *command = packet.mutable_cmd()->add_robot_commands();
 
-        // Preenche comando com dados
         command->set_yellowteam(_color == YELLOW);
         command->set_id(_robotId);
+        command->set_wheel_left(leftSpeed);
+        command->set_wheel_right(rightSpeed);
 
-        switch (instruction) {
-            case FWD:    command->set_wheel_left(_baseSpeed);  command->set_wheel_right(_baseSpeed);  break;
-            case LEFT:   command->set_wheel_left(-_baseSpeed / 5); command->set_wheel_right(_baseSpeed / 5);  break;
-            case RIGHT:  command->set_wheel_left(_baseSpeed / 5);  command->set_wheel_right(-_baseSpeed / 5); break;
-            case BCKWD:  command->set_wheel_left(-_baseSpeed); command->set_wheel_right(-_baseSpeed); break;
-            case RELEASED:
-            default:     command->set_wheel_left(0); command->set_wheel_right(0); break;
-        }
-
-        // Serializa, enfia no packet e manda dados pela rede
         string buffer;
         packet.SerializeToString(&buffer);
-        if(_udpSocket->write(buffer.c_str(), buffer.length()) == -1) {
+        if (_udpSocket->write(buffer.c_str(), buffer.length()) == -1) {
             cout << "[ERROR]\n";
         }
-
     }
-}; // classe client
+};
 
 namespace Controller {
 
     const int DEADZONE = 8000;
+    const float AXIS_MAX = 32767.0f;
 
-    // Inicializa e retorna o handle para um controle
     SDL_GameController* open(int index) {
         if (SDL_IsGameController(index)) {
             SDL_GameController *gc = SDL_GameControllerOpen(index);
@@ -91,27 +71,34 @@ namespace Controller {
         return nullptr;
     }
 
-    // Fecha um controle
     void close(SDL_GameController* gc) {
         if (gc) SDL_GameControllerClose(gc);
     }
 
-    // Traduz input para instrução
-    Instructions getInstruction(SDL_GameController* gc) {
-        if (!gc) return RELEASED;
+    // Returns {leftWheel, rightWheel} from analog stick
+   pair<float, float> getWheelSpeeds(SDL_GameController* gc, float baseSpeed) {
+        if (!gc) return {0.0f, 0.0f};
 
         Sint16 ly = SDL_GameControllerGetAxis(gc, SDL_CONTROLLER_AXIS_LEFTY);
-        bool l1   = SDL_GameControllerGetButton(gc, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-        bool r1   = SDL_GameControllerGetButton(gc, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+        Sint16 lx = SDL_GameControllerGetAxis(gc, SDL_CONTROLLER_AXIS_LEFTX);
+        Sint16 ry = SDL_GameControllerGetAxis(gc, SDL_CONTROLLER_AXIS_RIGHTY);
+        Sint16 rx = SDL_GameControllerGetAxis(gc, SDL_CONTROLLER_AXIS_RIGHTX);
 
-        if (l1 ^ r1) {
-            return l1 ? LEFT : RIGHT;
-        } else {
-            if (ly < -DEADZONE)      return FWD;
-            else if (ly > DEADZONE)  return BCKWD;
-        }
-        return RELEASED;
-    }
+        Sint16 rawY = (abs(ry) > abs(ly)) ? ry : ly;
+        Sint16 rawX = rx; // somente stick direito para virar
+
+        // Normalize, apply deadzone, square for gentler near-center response
+        auto process = [&](Sint16 raw) -> float {
+            if (abs(raw) < DEADZONE) return 0.0f;
+            float norm = raw / AXIS_MAX;                  // [-1, 1]
+            return -norm * norm * norm * baseSpeed;       // quadratic, preserves sign
+        };
+
+        float forward = process(rawY);
+        float turn    = process(rawX);
+
+        return {forward - turn, forward + turn};
+    }   
 
 } // namespace Controller
 
@@ -119,18 +106,19 @@ int main(int argc, char **argv) {
 
     QCoreApplication app(argc, argv);
 
-    ActuatorClient blue("127.0.0.1", 20013, BLUE);
+    // ActuatorClient blue("127.0.0.1", 20013, BLUE);
+    // blue.setRobotId(0);
+
     ActuatorClient yellow("127.0.0.1", 20012, YELLOW);
-    blue.setRobotId(0);
     yellow.setRobotId(0);
 
     if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0) return 1;
 
-    SDL_GameController *gcBlue   = Controller::open(0);
-    SDL_GameController *gcYellow = Controller::open(1);
+    // SDL_GameController *gcBlue = Controller::open(0);
+    SDL_GameController *gcYellow = Controller::open(0); // was index 1
 
-    if (!gcBlue || !gcYellow) {
-        std::cout << "Dois controles não detectados!" << std::endl;
+    if (!gcYellow) {
+        std::cout << "Controle não detectado!" << std::endl;
         exit(EXIT_FAILURE);
     }
 
@@ -141,15 +129,17 @@ int main(int argc, char **argv) {
             if (e.type == SDL_QUIT) quit = true;
         }
 
-        blue.sendCommand(Controller::getInstruction(gcBlue));
-        yellow.sendCommand(Controller::getInstruction(gcYellow));
+        // auto [blueL, blueR] = Controller::getWheelSpeeds(gcBlue, 32.0f);
+        // blue.sendWheelCommand(blueL, blueR);
+
+        auto [yellowL, yellowR] = Controller::getWheelSpeeds(gcYellow, 32.0f);
+        yellow.sendWheelCommand(yellowL, yellowR);
 
         QThread::msleep(100);
     }
 
-    Controller::close(gcBlue);
+    // Controller::close(gcBlue);
     Controller::close(gcYellow);
     SDL_Quit();
     return 0;
-
-} // main
+}
