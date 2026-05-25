@@ -131,7 +131,7 @@ Exemplo:
 ## 🎮 Controles
 
 * **Analógico esquerdo** → frente / ré
-* **L1 / R1** → girar para esquerda / direita
+* **Analógico direito** → girar para esquerda / direita
 * Nenhum input → motores desligados (`RELEASED`)
 
 ---
