@@ -59,6 +59,7 @@ namespace Controller {
 
     const int DEADZONE = 8000;
     const float AXIS_MAX = 32767.0f;
+    const float TURN_SENSITIVITY = 0.5f;
 
     SDL_GameController* open(int index) {
         if (SDL_IsGameController(index)) {
@@ -95,7 +96,7 @@ namespace Controller {
         };
 
         float forward = process(rawY);
-        float turn    = process(rawX);
+        float turn    = process(rawX) * TURN_SENSITIVITY;
 
         return {forward - turn, forward + turn};
     }   
