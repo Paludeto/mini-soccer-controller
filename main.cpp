@@ -106,18 +106,18 @@ int main(int argc, char **argv) {
 
     QCoreApplication app(argc, argv);
 
-    // ActuatorClient blue("127.0.0.1", 20013, BLUE);
-    // blue.setRobotId(0);
+    ActuatorClient blue("127.0.0.1", 20013, BLUE);
+    blue.setRobotId(0);
 
-    ActuatorClient yellow("127.0.0.1", 20012, YELLOW);
-    yellow.setRobotId(0);
+    // ActuatorClient yellow("127.0.0.1", 20012, YELLOW);
+    // yellow.setRobotId(0);
 
     if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0) return 1;
 
-    // SDL_GameController *gcBlue = Controller::open(0);
-    SDL_GameController *gcYellow = Controller::open(0); // was index 1
+    SDL_GameController *gcBlue = Controller::open(0);
+    // SDL_GameController *gcYellow = Controller::open(0);
 
-    if (!gcYellow) {
+    if (!gcBlue) {
         std::cout << "Controle não detectado!" << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -129,17 +129,18 @@ int main(int argc, char **argv) {
             if (e.type == SDL_QUIT) quit = true;
         }
 
-        // auto [blueL, blueR] = Controller::getWheelSpeeds(gcBlue, 32.0f);
-        // blue.sendWheelCommand(blueL, blueR);
+        auto [blueL, blueR] = Controller::getWheelSpeeds(gcBlue, 32.0f);
+        blue.sendWheelCommand(blueL, blueR);
 
-        auto [yellowL, yellowR] = Controller::getWheelSpeeds(gcYellow, 32.0f);
-        yellow.sendWheelCommand(yellowL, yellowR);
+        // auto [yellowL, yellowR] = Controller::getWheelSpeeds(gcYellow, 32.0f);
+        // yellow.sendWheelCommand(yellowL, yellowR);
 
         QThread::msleep(100);
     }
 
-    // Controller::close(gcBlue);
-    Controller::close(gcYellow);
+    Controller::close(gcBlue);
+    // Controller::close(gcYellow);
     SDL_Quit();
     return 0;
+    
 }
